@@ -1,0 +1,522 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot,es-noshorthands]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+
+\usetikzlibrary{positioning}
+
+\lstset{
+  language=Java,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape\color{gray},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=4pt,
+  frame=single,
+  breaklines=true,
+  columns=fullflexible,
+  xleftmargin=8pt,
+  aboveskip=4pt,
+  belowskip=2pt
+}
+
+\tikzset{
+  v/.style={circle,draw,minimum size=6mm,inner sep=0pt,font=\small},
+  w/.style={midway,fill=white,inner sep=1pt,font=\scriptsize},
+  mst/.style={very thick,red!70!black},
+  cell/.style={draw,minimum width=7mm,minimum height=5mm,inner sep=0pt,font=\scriptsize}
+}
+
+\addto\captionsspanish{\renewcommand{\tablename}{Tabla}\renewcommand{\abstractname}{Abstract}}
+\renewcommand{\lstlistingname}{Código}
+\renewcommand{\thetable}{\arabic{table}}
+\hyphenation{al-go-rit-mos}
+
+\begin{document}
+
+\title{Grafos y Algoritmos Fundamentales de Recorrido y Optimización: Representaciones, BFS, DFS, Prim y Kruskal}
+
+\author{\IEEEauthorblockN{Nombre Apellido Apellido}
+\IEEEauthorblockA{Escuela de Ingeniería en Computadores\\
+Instituto Tecnológico de Costa Rica\\
+Algoritmos y Estructuras de Datos I -- II Semestre 2026\\
+Cartago, Costa Rica\\
+correo@estudiantec.cr}}
+
+\maketitle
+
+\begin{abstract}
+Graphs are one of the most important data structures in computer science because they model relationships between entities such as cities, computers or people. This paper presents a study of graph theory fundamentals, the two classic ways of representing a graph in memory (adjacency matrix and adjacency lists), the breadth-first (BFS) and depth-first (DFS) traversal algorithms, and the Minimum Spanning Tree problem solved with Prim's and Kruskal's algorithms. All the algorithms were implemented in Java and tested on the same six-vertex weighted base graph, which is also used to illustrate both representations. The time complexity of each algorithm is analyzed: BFS and DFS run in $O(V+E)$ with adjacency lists and $O(V^2)$ with an adjacency matrix, Prim runs in $O(E\log V)$ with a binary heap, and Kruskal runs in $O(E\log E)$. The results show that the choice of representation has a direct impact on performance and that both MST algorithms obtain a tree of the same total weight.
+\end{abstract}
+
+\vspace{2mm}
+\noindent\textbf{\textit{Resumen---}}\textit{Los grafos son una de las estructuras de datos más importantes de las ciencias de la computación porque permiten modelar relaciones entre entidades como ciudades, computadoras o personas. Este trabajo presenta un estudio de los fundamentos de la teoría de grafos, las dos formas clásicas de representarlos en memoria (matriz y listas de adyacencia), los algoritmos de recorrido en anchura (BFS) y en profundidad (DFS), y el problema del árbol de expansión mínima resuelto con los algoritmos de Prim y Kruskal. Todos los algoritmos se implementaron en Java y se probaron sobre un mismo grafo base ponderado de seis vértices, que también se usa para ilustrar ambas representaciones. Se analiza la complejidad temporal de cada algoritmo: BFS y DFS toman $O(V+E)$ con listas de adyacencia y $O(V^2)$ con matriz, Prim toma $O(E\log V)$ con un heap binario y Kruskal toma $O(E\log E)$. Los resultados muestran que la representación elegida afecta directamente el rendimiento y que ambos algoritmos de expansión mínima obtienen un árbol del mismo peso total.}
+
+\vspace{2mm}
+\begin{IEEEkeywords}
+grafos, lista de adyacencia, matriz de adyacencia, BFS, DFS, Prim, Kruskal, árbol de expansión mínima.
+\end{IEEEkeywords}
+
+%--------------------------------------------------------------
+\section{Introducción}
+Los grafos constituyen una de las estructuras de datos más importantes dentro de las ciencias de la computación debido a su capacidad para modelar relaciones entre entidades. Se aplican en redes sociales, telecomunicaciones, sistemas de navegación GPS, redes de computadoras, inteligencia artificial y análisis de datos~\cite{cormen,rosen}.
+
+Estudiar grafos permite comprender cómo almacenar, representar y recorrer información interconectada de forma eficiente. Además, existen algoritmos que resuelven problemas concretos como la exploración de una red, la conectividad o la construcción de la red más barata que conecta todos sus nodos.
+
+En este documento se estudian los principales conceptos, representaciones y algoritmos asociados a los grafos, junto con su funcionamiento, ventajas, aplicaciones y complejidad computacional. Todos los algoritmos se implementaron en Java y se ejecutaron sobre un mismo grafo base (Fig.~\ref{fig:base}), de modo que las comparaciones sean directas. El código completo está disponible en el repositorio indicado en los anexos.
+
+Nota sobre la notación: el enunciado pide expresar la complejidad como $O(n)$; en grafos es más preciso usar $V$ para el número de vértices y $E$ para el número de aristas, ya que el costo depende de ambos. Cuando es útil se indica la relación con $n=V$.
+
+%--------------------------------------------------------------
+\section{Objetivos de la investigación}
+\subsection{Objetivo general}
+Investigar y analizar las estructuras de datos tipo grafo y los principales algoritmos asociados a su representación, recorrido, análisis y optimización, mediante la documentación teórica y la implementación práctica de cada algoritmo estudiado.
+
+\subsection{Objetivos específicos}
+\begin{itemize}
+  \item Comprender los conceptos fundamentales de la teoría de grafos y sus componentes principales.
+  \item Implementar cada uno de los algoritmos estudiados en un lenguaje de programación (Java).
+  \item Estudiar el funcionamiento y la aplicación de los algoritmos de recorrido en anchura (BFS) y en profundidad (DFS).
+\end{itemize}
+
+%--------------------------------------------------------------
+\section{Desarrollo}
+
+%==============================================================
+\subsection{Definición de grafos}
+\subsubsection{Definición teórica}
+Un grafo es un par $G=(V,E)$, donde $V$ es un conjunto finito de \emph{vértices} (nodos) y $E$ es un conjunto de \emph{aristas} que conectan pares de vértices~\cite{diestel,rosen}. Los conceptos principales son:
+\begin{itemize}
+  \item \textbf{Grafo no dirigido:} las aristas no tienen sentido; $\{u,v\}=\{v,u\}$. En uno dirigido (dígrafo) las aristas son pares ordenados $(u,v)$.
+  \item \textbf{Grafo ponderado:} cada arista tiene un peso $w(u,v)$ (distancia, costo, tiempo).
+  \item \textbf{Grado} de un vértice: número de aristas incidentes. En un grafo no dirigido $\sum_{v\in V}\deg(v)=2|E|$.
+  \item \textbf{Camino:} secuencia de vértices donde cada par consecutivo está unido por una arista. Un \textbf{ciclo} es un camino que empieza y termina en el mismo vértice.
+  \item \textbf{Grafo conexo:} existe un camino entre cualquier par de vértices.
+  \item \textbf{Árbol:} grafo conexo y sin ciclos; con $V$ vértices tiene exactamente $V-1$ aristas.
+\end{itemize}
+Un grafo con $E$ cercano a $V$ se llama \emph{disperso}; uno con $E$ cercano a $V^2$ se llama \emph{denso}. Esta distinción es clave para elegir la representación (sección~\ref{sec:repr}).
+
+\subsubsection{Casos de uso}
+\begin{itemize}
+  \item \textbf{Mapas y GPS:} las intersecciones son vértices y las calles son aristas con peso igual a la distancia o el tiempo.
+  \item \textbf{Redes sociales:} las personas son vértices y las amistades son aristas.
+  \item \textbf{Redes de computadoras y telecomunicaciones:} routers y enlaces; el árbol de expansión mínima se usa para diseñar redes de bajo costo.
+  \item \textbf{Inteligencia artificial y videojuegos:} el espacio de estados de un problema o un mapa de juego se recorre con BFS/DFS.
+  \item \textbf{Dependencias:} paquetes de software o materias de un plan de estudios (grafo dirigido).
+\end{itemize}
+
+\subsubsection{Ejemplo práctico}
+Suponga seis edificios de un campus que se quieren conectar con fibra óptica. Cada edificio es un vértice y cada posible tendido es una arista cuyo peso es el costo en miles de dólares. El grafo base de la Fig.~\ref{fig:base} modela esa situación (los vértices $A$ a $F$ son los edificios) y se usa en el resto del documento. Sus aristas son: $A$--$B$ (7), $A$--$C$ (3), $B$--$C$ (1), $B$--$D$ (5), $C$--$E$ (6), $D$--$E$ (2), $D$--$F$ (4) y $E$--$F$ (8). Tiene $V=6$ y $E=8$.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[scale=0.95]
+  \node[v] (A) at (0,0) {A};
+  \node[v] (B) at (1.8,1.2) {B};
+  \node[v] (C) at (1.8,-1.2) {C};
+  \node[v] (D) at (3.8,1.2) {D};
+  \node[v] (E) at (3.8,-1.2) {E};
+  \node[v] (F) at (5.6,0) {F};
+  \draw (A) -- node[w]{7} (B);
+  \draw (A) -- node[w]{3} (C);
+  \draw (B) -- node[w]{1} (C);
+  \draw (B) -- node[w]{5} (D);
+  \draw (C) -- node[w]{6} (E);
+  \draw (D) -- node[w]{2} (E);
+  \draw (D) -- node[w]{4} (F);
+  \draw (E) -- node[w]{8} (F);
+\end{tikzpicture}
+\caption{Grafo base no dirigido y ponderado usado en todo el documento.}
+\label{fig:base}
+\end{figure}
+
+%==============================================================
+\subsection{Implementación de listas y matriz de adyacencia}
+\label{sec:repr}
+
+\subsubsection{Matriz de adyacencia}
+Es una matriz $M$ de $V\times V$ donde $M[i][j]$ guarda el peso de la arista $i$--$j$ (o $0$ si no existe). En un grafo no dirigido es simétrica. La Fig.~\ref{fig:matriz} muestra la matriz del grafo base.
+
+\begin{figure}[t]
+\centering
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{c|cccccc}
+   & A & B & C & D & E & F \\ \hline
+ A & 0 & 7 & 3 & 0 & 0 & 0 \\
+ B & 7 & 0 & 1 & 5 & 0 & 0 \\
+ C & 3 & 1 & 0 & 0 & 6 & 0 \\
+ D & 0 & 5 & 0 & 0 & 2 & 4 \\
+ E & 0 & 0 & 6 & 2 & 0 & 8 \\
+ F & 0 & 0 & 0 & 4 & 8 & 0
+\end{tabular}
+\caption{Matriz de adyacencia del grafo base.}
+\label{fig:matriz}
+\end{figure}
+
+\begin{lstlisting}[caption={Núcleo de GrafoMatriz.java}]
+public class GrafoMatriz implements Grafo {
+  private final int[][] matriz;
+  private final int n;
+
+  public void agregarArista(int u, int v, int peso) {
+    matriz[u][v] = peso;   // O(1)
+    matriz[v][u] = peso;
+  }
+  public List<Arista> vecinos(int u) { // O(V)
+    List<Arista> r = new ArrayList<>();
+    for (int v = 0; v < n; v++)
+      if (matriz[u][v] != 0)
+        r.add(new Arista(u, v, matriz[u][v]));
+    return r;
+  }
+}
+\end{lstlisting}
+
+\subsubsection{Listas de adyacencia}
+Cada vértice guarda una lista con sus vecinos (y el peso de cada arista). La Fig.~\ref{fig:lista} muestra las listas del mismo grafo base.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=0.62cm,>=stealth]
+  \foreach \n/\i in {A/0,B/1,C/2,D/3,E/4,F/5} {
+    \node[cell,fill=gray!15] (h\n) at (0,-\i) {\n};
+  }
+  \node[cell] (a1) at (1.2,0) {B,7};  \node[cell] (a2) at (2.3,0) {C,3};
+  \node[cell] (b1) at (1.2,-1) {A,7}; \node[cell] (b2) at (2.3,-1) {C,1}; \node[cell] (b3) at (3.4,-1) {D,5};
+  \node[cell] (c1) at (1.2,-2) {A,3}; \node[cell] (c2) at (2.3,-2) {B,1}; \node[cell] (c3) at (3.4,-2) {E,6};
+  \node[cell] (d1) at (1.2,-3) {B,5}; \node[cell] (d2) at (2.3,-3) {E,2}; \node[cell] (d3) at (3.4,-3) {F,4};
+  \node[cell] (e1) at (1.2,-4) {C,6}; \node[cell] (e2) at (2.3,-4) {D,2}; \node[cell] (e3) at (3.4,-4) {F,8};
+  \node[cell] (f1) at (1.2,-5) {D,4}; \node[cell] (f2) at (2.3,-5) {E,8};
+  \foreach \p/\q in {hA/a1,a1/a2,hB/b1,b1/b2,b2/b3,hC/c1,c1/c2,c2/c3,hD/d1,d1/d2,d2/d3,hE/e1,e1/e2,e2/e3,hF/f1,f1/f2} {
+    \draw[->] (\p) -- (\q);
+  }
+\end{tikzpicture}
+\caption{Listas de adyacencia del grafo base (vecino, peso).}
+\label{fig:lista}
+\end{figure}
+
+\begin{lstlisting}[caption={Núcleo de GrafoLista.java}]
+public class GrafoLista implements Grafo {
+  private final List<List<Arista>> adyacencia;
+
+  public void agregarArista(int u, int v, int peso) {
+    adyacencia.get(u).add(new Arista(u, v, peso)); // O(1)
+    adyacencia.get(v).add(new Arista(v, u, peso));
+  }
+  public List<Arista> vecinos(int u) { // O(grado(u))
+    return adyacencia.get(u);
+  }
+}
+\end{lstlisting}
+
+\subsubsection{Ventajas y desventajas}
+La Tabla~\ref{tab:repr} resume la comparación.
+
+\begin{table}[t]
+\caption{Comparación entre las dos representaciones.}
+\label{tab:repr}
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+ & \textbf{Matriz} & \textbf{Listas} \\
+\midrule
+Espacio & $O(V^2)$ & $O(V+E)$ \\
+¿Existe arista $u$--$v$? & $O(1)$ & $O(\deg(u))$ \\
+Recorrer vecinos de $u$ & $O(V)$ & $O(\deg(u))$ \\
+Agregar arista & $O(1)$ & $O(1)$ \\
+Recorrer todo el grafo & $O(V^2)$ & $O(V+E)$ \\
+Mejor para & grafos densos & grafos dispersos \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\emph{Matriz.} Ventajas: consultar o modificar una arista es inmediato y la implementación es muy simple. Desventajas: ocupa $V^2$ celdas aunque haya pocas aristas y recorrer los vecinos obliga a revisar toda la fila.
+
+\emph{Listas.} Ventajas: usan memoria proporcional al tamaño real del grafo y recorren solo los vecinos existentes. Desventajas: verificar si una arista existe requiere recorrer la lista del vértice y el acceso es menos directo.
+
+En el grafo base la matriz usa 36 celdas para 8 aristas (16 entradas distintas de cero), mientras que las listas guardan 16 elementos; en un grafo de miles de vértices y pocas conexiones la diferencia sería enorme.
+
+%==============================================================
+\subsection{Algoritmos de recorrido por anchura y profundidad}
+
+\subsubsection{Recorrido por anchura (BFS)}
+BFS~\cite{moore,cormen} explora el grafo por niveles: visita al vértice inicial, luego a todos sus vecinos, luego a los vecinos de estos, etc. Usa una \textbf{cola} (FIFO) y un arreglo de visitados. En un grafo no ponderado encuentra el camino con menos aristas desde el origen. Se aplica en búsqueda del camino más corto sin pesos, redes sociales (``amigos a distancia $k$'') y detección de componentes conexas.
+
+\begin{lstlisting}[caption={BFS (Recorridos.java)}]
+public static List<Integer> bfs(Grafo g, int inicio) {
+  boolean[] visitado = new boolean[g.numVertices()];
+  List<Integer> orden = new ArrayList<>();
+  Queue<Integer> cola = new ArrayDeque<>();
+  visitado[inicio] = true;
+  cola.add(inicio);
+  while (!cola.isEmpty()) {
+    int u = cola.poll();
+    orden.add(u);
+    for (Arista a : g.vecinos(u)) {
+      if (!visitado[a.destino()]) {
+        visitado[a.destino()] = true;
+        cola.add(a.destino());
+      }
+    }
+  }
+  return orden;
+}
+\end{lstlisting}
+
+\emph{Complejidad.} Cada vértice entra una sola vez a la cola ($O(V)$) y cada arista se examina una vez en grafos dirigidos o dos veces en no dirigidos ($O(E)$). Con listas de adyacencia el total es $\mathbf{O(V+E)}$; con matriz, obtener los vecinos de cada vértice cuesta $O(V)$, por lo que el total es $O(V^2)$. Si el grafo es conexo, $E\ge V-1$ y se puede escribir $O(E)$.
+
+\emph{Traza sobre el grafo base} (inicio en $A$, vecinos en orden alfabético):
+
+\begin{table}[h]
+\caption{Traza de BFS desde $A$.}
+\label{tab:bfs}
+\centering
+\small
+\begin{tabular}{clc}
+\toprule
+\textbf{Paso} & \textbf{Cola tras procesar} & \textbf{Orden} \\
+\midrule
+1 & $[B,C]$ tras $A$ & A \\
+2 & $[C,D]$ tras $B$ & A B \\
+3 & $[D,E]$ tras $C$ & A B C \\
+4 & $[E,F]$ tras $D$ & A B C D \\
+5 & $[F]$ tras $E$ & A B C D E \\
+6 & $[\,]$ tras $F$ & A B C D E F \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Recorrido por profundidad (DFS)}
+DFS~\cite{tarjan,cormen} avanza por un camino lo más profundo posible y retrocede (\emph{backtracking}) cuando ya no hay vecinos sin visitar. Se implementa con recursión (usa la pila de llamadas) o con una pila explícita. Se aplica en detección de ciclos, ordenamiento topológico, componentes conexas, resolución de laberintos y búsqueda en espacios de estados.
+
+\begin{lstlisting}[caption={DFS recursivo (Recorridos.java)}]
+public static List<Integer> dfs(Grafo g, int inicio) {
+  boolean[] visitado = new boolean[g.numVertices()];
+  List<Integer> orden = new ArrayList<>();
+  dfsRec(g, inicio, visitado, orden);
+  return orden;
+}
+private static void dfsRec(Grafo g, int u,
+    boolean[] visitado, List<Integer> orden) {
+  visitado[u] = true;
+  orden.add(u);
+  for (Arista a : g.vecinos(u))
+    if (!visitado[a.destino()])
+      dfsRec(g, a.destino(), visitado, orden);
+}
+\end{lstlisting}
+
+\emph{Complejidad.} Igual que BFS: cada vértice se visita una vez y cada arista se revisa una cantidad constante de veces, así que el costo es $\mathbf{O(V+E)}$ con listas y $O(V^2)$ con matriz. El espacio adicional es $O(V)$ (arreglo de visitados y pila de llamadas, que en el peor caso llega a profundidad $V$). La versión iterativa (\texttt{dfsIterativo}) usa una pila explícita y produce el mismo orden, evitando desbordar la pila en grafos muy profundos.
+
+\emph{Traza sobre el grafo base} desde $A$: $A\to B$; de $B$ el primer vecino sin visitar es $C$; de $C$ se pasa a $E$ (pues $A$ y $B$ ya fueron visitados); de $E$ se pasa a $D$; de $D$ se pasa a $F$. Orden: \textbf{A B C E D F}. Se nota la diferencia con BFS (A B C D E F): DFS se hunde por una rama antes de explorar las demás.
+
+%==============================================================
+\subsection{Problema del árbol de expansión mínima}
+Dado un grafo conexo, no dirigido y ponderado, un \emph{árbol de expansión} es un subgrafo que conecta todos los vértices sin ciclos (por tanto, con $V-1$ aristas). El \emph{árbol de expansión mínima} (MST) es el de menor peso total. Se usa en diseño de redes eléctricas, de fibra óptica o de tuberías, y en agrupamiento (\emph{clustering}). Ambos algoritmos son \emph{voraces} (\emph{greedy}) y se apoyan en la propiedad del corte: la arista de menor peso que cruza cualquier corte del grafo pertenece a algún MST~\cite{cormen,sedgewick}.
+
+\subsubsection{Algoritmo de Prim}
+Prim~\cite{prim} hace crecer un único árbol a partir de un vértice: en cada paso agrega la arista de menor peso que conecta el árbol con un vértice que aún no pertenece a él. Se implementa con una cola de prioridad (min-heap).
+
+\begin{lstlisting}[caption={Prim (ArbolExpansionMinima.java)}]
+public static List<Arista> prim(Grafo g, int inicio) {
+  int n = g.numVertices();
+  boolean[] enArbol = new boolean[n];
+  List<Arista> arbol = new ArrayList<>();
+  PriorityQueue<Arista> cola = new PriorityQueue<>();
+  enArbol[inicio] = true;
+  cola.addAll(g.vecinos(inicio));
+  while (!cola.isEmpty() && arbol.size() < n - 1) {
+    Arista menor = cola.poll();
+    if (enArbol[menor.destino()]) continue;
+    enArbol[menor.destino()] = true;
+    arbol.add(menor);
+    for (Arista a : g.vecinos(menor.destino()))
+      if (!enArbol[a.destino()]) cola.add(a);
+  }
+  return arbol;
+}
+\end{lstlisting}
+
+\emph{Complejidad.} Cada arista entra a lo sumo dos veces al heap y cada inserción o extracción cuesta $O(\log E)=O(\log V)$. Con listas de adyacencia y heap binario el total es $\mathbf{O(E\log V)}$. Con matriz y búsqueda lineal del mínimo es $O(V^2)$, que puede ser mejor en grafos muy densos.
+
+\subsubsection{Algoritmo de Kruskal}
+Kruskal~\cite{kruskal} ordena todas las aristas por peso y las recorre de menor a mayor; agrega una arista solo si une dos componentes distintas (es decir, si no forma un ciclo). Para detectar ciclos eficientemente se usa la estructura \emph{Union-Find} con compresión de caminos y unión por rango~\cite{tarjan75}.
+
+\begin{lstlisting}[caption={Kruskal (ArbolExpansionMinima.java)}]
+public static List<Arista> kruskal(Grafo g) {
+  int n = g.numVertices();
+  List<Arista> ordenadas = new ArrayList<>(g.aristas());
+  Collections.sort(ordenadas);
+  UnionFind uf = new UnionFind(n);
+  List<Arista> arbol = new ArrayList<>();
+  for (Arista a : ordenadas) {
+    if (uf.union(a.origen(), a.destino())) {
+      arbol.add(a);
+      if (arbol.size() == n - 1) break;
+    }
+  }
+  return arbol;
+}
+\end{lstlisting}
+
+\emph{Complejidad.} Ordenar las aristas cuesta $O(E\log E)$; las $E$ operaciones de Union-Find cuestan $O(E\,\alpha(V))$, prácticamente constante cada una. Como $E\le V^2$, $\log E = O(\log V)$ y el total es $\mathbf{O(E\log E)=O(E\log V)}$.
+
+\subsubsection{Ejecución sobre el grafo base}
+La Tabla~\ref{tab:kruskal} muestra Kruskal y la Tabla~\ref{tab:prim} muestra Prim iniciando en $A$. Ambos producen un árbol de peso total $\mathbf{15}$ con las mismas cinco aristas (Fig.~\ref{fig:mst}).
+
+\begin{table}[h]
+\caption{Kruskal sobre el grafo base.}
+\label{tab:kruskal}
+\centering
+\small
+\begin{tabular}{clc}
+\toprule
+\textbf{Arista (peso)} & \textbf{Decisión} & \textbf{Total} \\
+\midrule
+B--C (1) & agrega & 1 \\
+D--E (2) & agrega & 3 \\
+A--C (3) & agrega & 6 \\
+D--F (4) & agrega & 10 \\
+B--D (5) & agrega (une dos componentes) & 15 \\
+C--E (6) & descarta (ciclo) & 15 \\
+A--B (7) & descarta (ciclo) & 15 \\
+E--F (8) & descarta (ciclo) & 15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\caption{Prim sobre el grafo base (inicio en $A$).}
+\label{tab:prim}
+\centering
+\small
+\begin{tabular}{clc}
+\toprule
+\textbf{Paso} & \textbf{Arista agregada (peso)} & \textbf{Total} \\
+\midrule
+1 & A--C (3), menor entre A--B (7) y A--C (3) & 3 \\
+2 & C--B (1) & 4 \\
+3 & B--D (5), menor entre B--D (5), C--E (6), A--B (7) & 9 \\
+4 & D--E (2) & 11 \\
+5 & D--F (4) & 15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[scale=0.95]
+  \node[v] (A) at (0,0) {A};
+  \node[v] (B) at (1.8,1.2) {B};
+  \node[v] (C) at (1.8,-1.2) {C};
+  \node[v] (D) at (3.8,1.2) {D};
+  \node[v] (E) at (3.8,-1.2) {E};
+  \node[v] (F) at (5.6,0) {F};
+  \draw[gray!60,dashed] (A) -- (B);
+  \draw[gray!60,dashed] (C) -- (E);
+  \draw[gray!60,dashed] (E) -- (F);
+  \draw[mst] (A) -- node[w]{3} (C);
+  \draw[mst] (B) -- node[w]{1} (C);
+  \draw[mst] (B) -- node[w]{5} (D);
+  \draw[mst] (D) -- node[w]{2} (E);
+  \draw[mst] (D) -- node[w]{4} (F);
+\end{tikzpicture}
+\caption{Árbol de expansión mínima (peso 15) en trazo grueso; las aristas descartadas aparecen punteadas.}
+\label{fig:mst}
+\end{figure}
+
+\begin{table}[h]
+\caption{Comparación de Prim y Kruskal.}
+\label{tab:mst}
+\centering
+\small
+\begin{tabular}{lp{2.7cm}p{2.7cm}}
+\toprule
+ & \textbf{Prim} & \textbf{Kruskal} \\
+\midrule
+Estrategia & crece un árbol desde un vértice & une componentes por arista \\
+Estructura clave & cola de prioridad & ordenamiento + Union-Find \\
+Complejidad & $O(E\log V)$ & $O(E\log E)$ \\
+Conviene en & grafos densos & grafos dispersos \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%--------------------------------------------------------------
+\section{Conclusiones}
+\begin{enumerate}
+  \item Un grafo $G=(V,E)$ es un modelo general para relaciones entre entidades, y la mayoría de los problemas de redes, rutas y dependencias se pueden expresar sobre él.
+  \item La representación determina el rendimiento: la matriz de adyacencia ofrece consulta de aristas en $O(1)$ pero usa $O(V^2)$ de espacio, mientras que las listas usan $O(V+E)$ y son la mejor opción para grafos dispersos, que son los más comunes en la práctica.
+  \item BFS y DFS recorren todo el grafo en $O(V+E)$ con listas de adyacencia ($O(V^2)$ con matriz). BFS visita por niveles y sirve para caminos más cortos en grafos no ponderados; DFS profundiza antes de retroceder y sirve para ciclos, componentes y ordenamiento topológico. En el grafo base dieron órdenes distintos (A B C D E F y A B C E D F).
+  \item Prim ($O(E\log V)$) y Kruskal ($O(E\log E)$) son algoritmos voraces correctos para el árbol de expansión mínima; sobre el grafo base ambos obtuvieron un árbol de peso 15 con cinco aristas, lo que coincide con $V-1$.
+  \item Implementar los algoritmos en Java sobre una interfaz común (\texttt{Grafo}) permitió probar las dos representaciones con el mismo código de BFS, DFS y Prim, y verificar con pruebas automáticas que los resultados no dependen de la representación.
+\end{enumerate}
+
+%--------------------------------------------------------------
+\begin{thebibliography}{9}
+\bibitem{cormen} T. H. Cormen, C. E. Leiserson, R. L. Rivest y C. Stein, \emph{Introduction to Algorithms}, 4.ª ed. Cambridge, MA, EE. UU.: MIT Press, 2022.
+\bibitem{sedgewick} R. Sedgewick y K. Wayne, \emph{Algorithms}, 4.ª ed. Upper Saddle River, NJ, EE. UU.: Addison-Wesley, 2011.
+\bibitem{rosen} K. H. Rosen, \emph{Discrete Mathematics and Its Applications}, 8.ª ed. Nueva York, NY, EE. UU.: McGraw-Hill, 2019.
+\bibitem{diestel} R. Diestel, \emph{Graph Theory}, 5.ª ed. Berlín, Alemania: Springer, 2017.
+\bibitem{moore} E. F. Moore, ``The shortest path through a maze,'' en \emph{Proc. Int. Symp. Theory of Switching}, Cambridge, MA, EE. UU., 1959, pp. 285--292.
+\bibitem{tarjan} R. E. Tarjan, ``Depth-first search and linear graph algorithms,'' \emph{SIAM J. Comput.}, vol. 1, n.º 2, pp. 146--160, 1972.
+\bibitem{prim} R. C. Prim, ``Shortest connection networks and some generalizations,'' \emph{Bell Syst. Tech. J.}, vol. 36, n.º 6, pp. 1389--1401, 1957.
+\bibitem{kruskal} J. B. Kruskal, ``On the shortest spanning subtree of a graph and the traveling salesman problem,'' \emph{Proc. Amer. Math. Soc.}, vol. 7, n.º 1, pp. 48--50, 1956.
+\bibitem{tarjan75} R. E. Tarjan, ``Efficiency of a good but not linear set union algorithm,'' \emph{J. ACM}, vol. 22, n.º 2, pp. 215--225, 1975.
+\end{thebibliography}
+
+%--------------------------------------------------------------
+\appendices
+\section{Repositorio con los algoritmos}
+Código fuente completo en Java (grafo con matriz y con listas, BFS, DFS, Prim, Kruskal, Union-Find, programa de demostración y pruebas):
+
+\noindent\url{https://github.com/USUARIO/grafos-java}
+
+\section{Estructura del repositorio}
+\begin{lstlisting}[language={},caption={Archivos del proyecto}]
+src/grafos/Arista.java
+src/grafos/Grafo.java
+src/grafos/GrafoMatriz.java
+src/grafos/GrafoLista.java
+src/grafos/Recorridos.java
+src/grafos/UnionFind.java
+src/grafos/ArbolExpansionMinima.java
+src/grafos/Main.java
+test/PruebasGrafos.java
+\end{lstlisting}
+
+\section{Salida del programa de demostración}
+\begin{lstlisting}[language={},caption={Salida de \texttt{java grafos.Main}}]
+BFS (lista):  A B C D E F
+BFS (matriz): A B C D E F
+DFS (lista):  A B C E D F
+DFS (matriz): A B C E D F
+DFS iterativo: A B C E D F
+
+Prim (desde A):
+  A - C (3)   C - B (1)   B - D (5)
+  D - E (2)   D - F (4)   Peso total: 15
+Kruskal:
+  B - C (1)   D - E (2)   A - C (3)
+  D - F (4)   B - D (5)   Peso total: 15
+\end{lstlisting}
+
+\section{Compilación y ejecución}
+\begin{lstlisting}[language={},caption={Comandos (Java 17 o superior)}]
+javac -d out src/grafos/*.java
+java -cp out grafos.Main
+javac -cp out -d out-test test/PruebasGrafos.java
+java -cp out:out-test PruebasGrafos
+\end{lstlisting}
+
+\end{document}
